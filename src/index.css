@@ -49,72 +49,25 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --background: oklch(0.99 0 0);
+    --foreground: oklch(0.15 0 0);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.15 0 0);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.65 0.2 150);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0.01 150);
-    --secondary-foreground: oklch(0.205 0.05 150);
-    --muted: oklch(0.97 0.01 150);
-    --muted-foreground: oklch(0.556 0.05 150);
-    --accent: oklch(0.97 0.01 150);
-    --accent-foreground: oklch(0.205 0.05 150);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0.01 150);
-    --input: oklch(0.922 0.01 150);
-    --ring: oklch(0.708 0.1 150);
-    --chart-1: oklch(0.65 0.2 150);
-    --chart-2: oklch(0.556 0.15 150);
-    --chart-3: oklch(0.439 0.1 150);
-    --chart-4: oklch(0.371 0.08 150);
-    --chart-5: oklch(0.269 0.05 150);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0.01 150);
-    --sidebar-foreground: oklch(0.145 0.05 150);
-    --sidebar-primary: oklch(0.65 0.2 150);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0.01 150);
-    --sidebar-accent-foreground: oklch(0.205 0.05 150);
-    --sidebar-border: oklch(0.922 0.01 150);
-    --sidebar-ring: oklch(0.708 0.1 150);
-}
-
-.dark {
-    --background: oklch(0.145 0.05 150);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0.05 150);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0.05 150);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.75 0.15 150);
-    --primary-foreground: oklch(0.145 0.05 150);
-    --secondary: oklch(0.269 0.05 150);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0.05 150);
-    --muted-foreground: oklch(0.708 0.05 150);
-    --accent: oklch(0.269 0.05 150);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0.1 150);
-    --chart-1: oklch(0.75 0.15 150);
-    --chart-2: oklch(0.556 0.1 150);
-    --chart-3: oklch(0.439 0.08 150);
-    --chart-4: oklch(0.371 0.06 150);
-    --chart-5: oklch(0.269 0.04 150);
-    --sidebar: oklch(0.205 0.05 150);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.65 0.2 150);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0.05 150);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0.1 150);
+    --popover-foreground: oklch(0.15 0 0);
+    --primary: oklch(0.45 0.12 180); /* Professional Medical Teal */
+    --primary-foreground: oklch(0.99 0 0);
+    --secondary: oklch(0.96 0.01 180);
+    --secondary-foreground: oklch(0.25 0.05 180);
+    --muted: oklch(0.96 0.01 180);
+    --muted-foreground: oklch(0.5 0.05 180);
+    --accent: oklch(0.96 0.01 180);
+    --accent-foreground: oklch(0.25 0.05 180);
+    --destructive: oklch(0.6 0.2 25);
+    --border: oklch(0.9 0.01 180);
+    --input: oklch(0.9 0.01 180);
+    --ring: oklch(0.5 0.1 180);
+    --radius: 0.5rem;
 }
 
 @layer base {
@@ -122,13 +75,7 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply bg-[#FDFDFD] text-foreground min-h-screen;
-    background-image: 
-      linear-gradient(to bottom, oklch(1 0 0 / 0.85), oklch(1 0 0 / 0.85)),
-      url('https://picsum.photos/seed/medical-green-heart/1920/1080?blur=10');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
+    @apply bg-[#F8F9FA] text-foreground min-h-screen;
     }
   html {
     @apply font-sans;
@@ -136,10 +83,10 @@
 }
 
 @layer utilities {
-  .glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-2xl shadow-black/5;
+  .clinical-card {
+    @apply bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200;
   }
-  .glass-card {
-    @apply bg-white/60 backdrop-blur-lg border border-white/40 shadow-xl shadow-black/5 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300;
+  .clinical-header {
+    @apply bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50;
   }
 }
