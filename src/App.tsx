@@ -1,9 +1,12 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { useState, useMemo } from 'react';
+import { 
+  Routes, 
+  Route, 
+  Link, 
+  useParams, 
+  useNavigate,
+  Outlet
+} from 'react-router-dom';
 import { 
   Activity, 
   Calculator, 
@@ -13,12 +16,16 @@ import {
   User, 
   ChevronRight,
   Stethoscope,
-  TrendingUp
+  TrendingUp,
+  LayoutDashboard,
+  ShieldCheck,
+  Eye,
+  ArrowLeft,
+  CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -27,7 +34,8 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
-// --- CHA2DS2-VASc Logic ---
+// --- Logic & Types ---
+
 interface Cha2ds2VascState {
   heartFailure: boolean;
   hypertension: boolean;
@@ -76,20 +84,6 @@ const getRecommendation = (score: number, sex: 'male' | 'female') => {
   }
 };
 
-// --- Z-Score Logic ---
-interface ZScoreState {
-  value: string;
-  mean: string;
-  sd: string;
-}
-
-const initialZState: ZScoreState = {
-  value: '',
-  mean: '',
-  sd: '',
-};
-
-// --- ASCVD Logic ---
 interface AscvdState {
   age: string;
   sex: 'male' | 'female';
@@ -121,7 +115,7 @@ const calculateAscvd = (state: AscvdState) => {
   const sbp = parseFloat(state.sysBp);
 
   if (isNaN(age) || isNaN(tc) || isNaN(hdl) || isNaN(sbp)) return null;
-  if (age < 40 || age > 79) return "N/A (Age 40-79 only)";
+  if (age < 40 || age > 79) return "N/A (Chỉ dành cho tuổi 40-79)";
 
   const lnAge = Math.log(age);
   const lnTC = Math.log(tc);
@@ -132,22 +126,18 @@ const calculateAscvd = (state: AscvdState) => {
 
   if (state.sex === 'female') {
     if (state.race === 'white') {
-      s0 = 0.9665;
-      meanSum = -29.18;
+      s0 = 0.9665; meanSum = -29.18;
       sum = -29.799 * lnAge + 4.884 * Math.pow(lnAge, 2) + 13.54 * lnTC - 3.114 * lnAge * lnTC - 13.578 * lnHdl + 3.149 * lnAge * lnHdl + (state.isHypertensionTreated ? 2.019 : 1.957) * lnSbp + (state.isSmoker ? 7.574 : 0) - (state.isSmoker ? 1.665 * lnAge : 0) + (state.isDiabetes ? 0.661 : 0);
     } else {
-      s0 = 0.9533;
-      meanSum = 86.61;
+      s0 = 0.9533; meanSum = 86.61;
       sum = 17.114 * lnAge + 0.94 * lnTC - 18.92 * lnHdl + 4.475 * lnAge * lnHdl + (state.isHypertensionTreated ? 29.291 : 27.82) * lnSbp - (state.isHypertensionTreated ? 6.432 : 5.895) * lnAge * lnSbp + (state.isSmoker ? 0.691 : 0) + (state.isDiabetes ? 0.874 : 0);
     }
   } else {
     if (state.race === 'white') {
-      s0 = 0.9144;
-      meanSum = 61.18;
+      s0 = 0.9144; meanSum = 61.18;
       sum = 12.344 * lnAge + 11.853 * lnTC - 2.664 * lnAge * lnTC - 7.99 * lnHdl + 1.769 * lnAge * lnHdl + (state.isHypertensionTreated ? 1.797 : 1.764) * lnSbp + (state.isSmoker ? 7.837 : 0) - (state.isSmoker ? 1.795 * lnAge : 0) + (state.isDiabetes ? 0.658 : 0);
     } else {
-      s0 = 0.8954;
-      meanSum = 19.54;
+      s0 = 0.8954; meanSum = 19.54;
       sum = 2.469 * lnAge + 0.302 * lnTC - 0.307 * lnHdl + (state.isHypertensionTreated ? 1.916 : 1.809) * lnSbp + (state.isSmoker ? 0.549 : 0) + (state.isDiabetes ? 0.645 : 0);
     }
   }
@@ -156,16 +146,198 @@ const calculateAscvd = (state: AscvdState) => {
   return (risk * 100).toFixed(1) + "%";
 };
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('cha2ds2vasc');
+// --- Components ---
 
-  // ASCVD State
-  const [ascvdState, setAscvdState] = useState<AscvdState>(initialAscvdState);
-  const ascvdResult = useMemo(() => calculateAscvd(ascvdState), [ascvdState]);
-  const resetAscvd = () => setAscvdState(initialAscvdState);
+const Layout = () => {
+  const [userInfo, setUserInfo] = useState({ name: '', department: '' });
 
-  // CHA2DS2-VASc State
-  const [chaState, setChaState] = useState<Cha2ds2VascState>(initialChaState);
+  return (
+    <div className="min-h-screen text-[#1A1A1A] font-sans selection:bg-primary/10 relative overflow-x-hidden">
+      {/* Background with Heart Theme */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10 bg-[#FDFDFD]">
+        <div className="absolute inset-0 opacity-10 bg-[url('https://picsum.photos/seed/heart-medical/1920/1080')] bg-cover bg-center grayscale" />
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute top-[40%] -right-[5%] w-[30%] h-[30%] rounded-full bg-primary/5 blur-[100px]" />
+        <div className="absolute -bottom-[10%] left-[20%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[150px]" />
+      </div>
+
+      <header className="sticky top-0 z-50 w-full border-b glass">
+        <div className="container mx-auto px-4 h-20 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform">
+              <Heart size={28} className="fill-white/20" />
+            </div>
+            <div>
+              <h1 className="font-black text-xl leading-tight text-primary tracking-tight">TỐNG TRỌNG ĐỨC</h1>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">CardioCalc Pro</p>
+            </div>
+          </Link>
+
+          <div className="hidden lg:flex items-center gap-6">
+            <nav className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
+              <Link to="/" className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white hover:shadow-sm transition-all flex items-center gap-2">
+                <LayoutDashboard size={16} /> Dashboard
+              </Link>
+              <Link to="/viewer" className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white hover:shadow-sm transition-all flex items-center gap-2">
+                <Eye size={16} /> Người xem
+              </Link>
+              <Link to="/admin" className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white hover:shadow-sm transition-all flex items-center gap-2">
+                <ShieldCheck size={16} /> Admin
+              </Link>
+            </nav>
+
+            <div className="flex gap-2">
+              <Input 
+                placeholder="Họ tên bác sĩ" 
+                className="h-9 w-40 text-xs glass border-primary/20 focus:border-primary"
+                value={userInfo.name}
+                onChange={(e) => setUserInfo(s => ({ ...s, name: e.target.value }))}
+              />
+              <Input 
+                placeholder="Khoa công tác" 
+                className="h-9 w-40 text-xs glass border-primary/20 focus:border-primary"
+                value={userInfo.department}
+                onChange={(e) => setUserInfo(s => ({ ...s, department: e.target.value }))}
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 max-w-6xl">
+        <Outlet />
+      </main>
+
+      <footer className="mt-20 border-t glass py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-center text-center md:text-left">
+            <div className="space-y-4">
+              <div className="flex items-center justify-center md:justify-start gap-2 text-primary">
+                <Stethoscope size={24} />
+                <span className="font-bold text-lg">CardioCalc Pro</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mx-auto md:mx-0">
+                Hệ thống hỗ trợ quyết định lâm sàng chuyên sâu cho bác sĩ tim mạch, phát triển bởi chuyên gia y tế.
+              </p>
+            </div>
+
+            <div className="space-y-4 bg-primary/5 p-6 rounded-3xl border border-primary/10">
+              <div className="flex items-center justify-center gap-2 text-primary font-bold">
+                <CreditCard size={20} />
+                <span>Hỗ trợ phát triển</span>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium">Momo: <span className="text-primary font-bold">0358740165</span></p>
+                <p className="text-[10px] text-muted-foreground mt-1">Mọi sự hỗ trợ đều giúp ứng dụng ngày càng tốt hơn.</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-bold">Người tạo app</p>
+              <p className="text-xl font-black text-primary">TỐNG TRỌNG ĐỨC</p>
+              <div className="flex items-center justify-center md:justify-start gap-4 mt-4 opacity-50">
+                <Heart size={16} />
+                <Activity size={16} />
+                <TrendingUp size={16} />
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-12 pt-8 border-t flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+            <span>© 2026 CardioCalc Pro - All Rights Reserved</span>
+            <span className="text-center">Miễn trừ trách nhiệm: Chỉ dành cho nhân viên y tế chuyên nghiệp</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+const Dashboard = () => {
+  const apps = [
+    {
+      id: 'cha2ds2vasc',
+      title: 'CHA₂DS₂-VASc',
+      desc: 'Đánh giá nguy cơ đột quỵ ở bệnh nhân rung nhĩ.',
+      icon: <Heart className="text-primary" />,
+      color: 'bg-green-50'
+    },
+    {
+      id: 'ascvd',
+      title: 'ASCVD Risk',
+      desc: 'Ước tính nguy cơ biến cố tim mạch xơ vữa 10 năm.',
+      icon: <Activity className="text-primary" />,
+      color: 'bg-emerald-50'
+    },
+    {
+      id: 'zscore',
+      title: 'Z-Score',
+      desc: 'Tính toán điểm chuẩn cho các thông số y tế.',
+      icon: <TrendingUp className="text-primary" />,
+      color: 'bg-teal-50'
+    }
+  ];
+
+  return (
+    <div className="space-y-10">
+      <div className="text-center space-y-4 max-w-2xl mx-auto">
+        <motion.h2 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-4xl font-black tracking-tight text-primary"
+        >
+          Trung tâm Tính toán Tim mạch
+        </motion.h2>
+        <motion.p 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-muted-foreground text-lg"
+        >
+          Hệ thống công cụ y khoa chính xác, nhanh chóng và hiện đại dành cho bác sĩ.
+        </motion.p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {apps.map((app, idx) => (
+          <motion.div
+            key={app.id}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: idx * 0.1 }}
+          >
+            <Link to={`/calc/${app.id}`}>
+              <Card className="h-full glass-card hover:-translate-y-2 transition-all cursor-pointer group overflow-hidden border-none">
+                <div className={cn("h-2 w-full", app.id === 'cha2ds2vasc' ? 'bg-green-500' : app.id === 'ascvd' ? 'bg-emerald-500' : 'bg-teal-500')} />
+                <CardHeader>
+                  <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-4 shadow-inner", app.color)}>
+                    {app.icon}
+                  </div>
+                  <CardTitle className="text-xl group-hover:text-primary transition-colors">{app.title}</CardTitle>
+                  <CardDescription className="text-sm leading-relaxed">{app.desc}</CardDescription>
+                </CardHeader>
+                <CardFooter className="pt-0">
+                  <div className="flex items-center text-xs font-bold text-primary uppercase tracking-wider gap-1">
+                    Bắt đầu tính toán <ChevronRight size={14} />
+                  </div>
+                </CardFooter>
+              </Card>
+            </Link>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const CalculatorPage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  // Common State
+  const [chaState, setChaState] = useState(initialChaState);
+  const [ascvdState, setAscvdState] = useState(initialAscvdState);
+  const [zState, setZState] = useState({ value: '', mean: '', sd: '' });
 
   const chaScore = useMemo(() => {
     let score = 0;
@@ -180,11 +352,8 @@ export default function App() {
     return score;
   }, [chaState]);
 
-  const resetCha = () => setChaState(initialChaState);
+  const ascvdResult = useMemo(() => calculateAscvd(ascvdState), [ascvdState]);
 
-  // Z-Score State
-  const [zState, setZState] = useState<ZScoreState>(initialZState);
-  
   const zResult = useMemo(() => {
     const v = parseFloat(zState.value);
     const m = parseFloat(zState.mean);
@@ -193,628 +362,384 @@ export default function App() {
     return (v - m) / s;
   }, [zState]);
 
-  const resetZ = () => setZState(initialZState);
-
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A1A] font-sans selection:bg-primary/10">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
-              <Stethoscope size={24} />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight text-primary">CardioCalc Pro</h1>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Cardiovascular Decision Support</p>
-            </div>
-          </div>
-          <div className="hidden md:flex items-center gap-6">
-            <nav className="flex items-center gap-4 text-sm font-medium">
-              <span className="text-primary border-b-2 border-primary pb-1">Calculators</span>
-              <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">Guidelines</span>
-              <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">About</span>
-            </nav>
+    <div className="space-y-6">
+      <Button variant="ghost" onClick={() => navigate('/')} className="mb-4 hover:bg-primary/10 hover:text-primary">
+        <ArrowLeft size={16} className="mr-2" /> Quay lại Dashboard
+      </Button>
+
+      {id === 'cha2ds2vasc' && (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <Card className="lg:col-span-3 border-none glass-card overflow-hidden">
+            <CardHeader className="bg-primary/5 border-b">
+              <CardTitle className="text-2xl text-primary">CHA₂DS₂-VASc Score</CardTitle>
+              <CardDescription>Đánh giá nguy cơ đột quỵ ở bệnh nhân rung nhĩ.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              {[
+                { id: 'hf', label: 'Suy tim sung huyết', sub: 'Hoặc rối loạn chức năng thất trái', key: 'heartFailure' },
+                { id: 'ht', label: 'Tăng huyết áp', sub: 'HA > 140/90 hoặc đang điều trị', key: 'hypertension' },
+                { id: 'dm', label: 'Đái tháo đường', sub: 'Đường huyết đói > 126mg/dL', key: 'diabetes' },
+                { id: 'stroke', label: 'Đột quỵ / TIA / Thuyên tắc', sub: 'Tiền sử biến cố mạch máu (+2)', key: 'stroke' },
+                { id: 'vascular', label: 'Bệnh mạch máu', sub: 'NMCT, bệnh mạch máu ngoại biên', key: 'vascular' },
+              ].map(item => (
+                <div key={item.id} className="flex items-center justify-between p-4 rounded-xl border bg-white/50 hover:border-primary transition-all">
+                  <div className="space-y-0.5">
+                    <Label htmlFor={item.id} className="text-base font-bold cursor-pointer">{item.label}</Label>
+                    <p className="text-[10px] text-muted-foreground">{item.sub}</p>
+                  </div>
+                  <Checkbox 
+                    id={item.id} 
+                    checked={(chaState as any)[item.key]} 
+                    onCheckedChange={(v) => setChaState(s => ({ ...s, [item.key]: !!v }))}
+                    className="h-6 w-6"
+                  />
+                </div>
+              ))}
+              <Separator />
+              <div className="space-y-4">
+                <Label className="text-xs font-black uppercase tracking-widest text-primary">Nhóm tuổi</Label>
+                <RadioGroup value={chaState.age} onValueChange={v => setChaState(s => ({ ...s, age: v as any }))} className="grid grid-cols-3 gap-2">
+                  {['under65', '65to74', 'over75'].map(a => (
+                    <Label key={a} className={cn("p-3 border rounded-xl text-center cursor-pointer text-sm font-bold transition-all", chaState.age === a ? "bg-primary text-white border-primary shadow-lg" : "bg-white/50 hover:bg-muted")}>
+                      <RadioGroupItem value={a} className="sr-only" />
+                      {a === 'under65' ? '< 65' : a === '65to74' ? '65-74' : '≥ 75'}
+                    </Label>
+                  ))}
+                </RadioGroup>
+              </div>
+              <div className="space-y-4">
+                <Label className="text-xs font-black uppercase tracking-widest text-primary">Giới tính</Label>
+                <RadioGroup value={chaState.sex} onValueChange={v => setChaState(s => ({ ...s, sex: v as any }))} className="grid grid-cols-2 gap-2">
+                  {['male', 'female'].map(s => (
+                    <Label key={s} className={cn("p-3 border rounded-xl text-center cursor-pointer text-sm font-bold transition-all", chaState.sex === s ? "bg-primary text-white border-primary shadow-lg" : "bg-white/50 hover:bg-muted")}>
+                      <RadioGroupItem value={s} className="sr-only" />
+                      {s === 'male' ? 'Nam' : 'Nữ'}
+                    </Label>
+                  ))}
+                </RadioGroup>
+              </div>
+            </CardContent>
+            <CardFooter className="bg-muted/20 p-4 flex justify-between">
+              <Button variant="ghost" size="sm" onClick={() => setChaState(initialChaState)}>
+                <RefreshCcw size={14} className="mr-2" /> Làm mới
+              </Button>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">ESC Guidelines 2020</span>
+            </CardFooter>
+          </Card>
+
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="border-none bg-primary text-white shadow-2xl shadow-primary/30 overflow-hidden rounded-3xl">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-lg font-medium opacity-80">Tổng điểm</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center py-10">
+                <div className="text-9xl font-black tracking-tighter">{chaScore}</div>
+                <div className="mt-4 px-6 py-2 bg-white/20 rounded-full text-sm font-black uppercase tracking-widest backdrop-blur-md">Điểm</div>
+              </CardContent>
+            </Card>
+            <Card className="border-none glass-card rounded-3xl">
+              <CardHeader>
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-primary">Kết quả lâm sàng</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-bold">Nguy cơ đột quỵ/năm</span>
+                  <span className="text-2xl font-black text-primary">{getStrokeRisk(chaScore)}</span>
+                </div>
+                <Separator />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
+                    <Info size={14} /> Khuyến cáo
+                  </div>
+                  <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 border-dashed text-sm leading-relaxed font-medium">
+                    {getRecommendation(chaScore, chaState.sex)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      </header>
+      )}
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="space-y-1">
-                <h2 className="text-3xl font-bold tracking-tight">Medical Calculators</h2>
-                <p className="text-muted-foreground">Select a tool to begin clinical assessment.</p>
+      {id === 'ascvd' && (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <Card className="lg:col-span-3 border-none glass-card overflow-hidden">
+            <CardHeader className="bg-primary/5 border-b">
+              <CardTitle className="text-2xl text-primary">ASCVD Risk Calculator</CardTitle>
+              <CardDescription>Ước tính nguy cơ biến cố tim mạch xơ vữa đầu tiên trong 10 năm.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest">Tuổi (40-79)</Label>
+                  <Input type="number" value={ascvdState.age} onChange={e => setAscvdState(s => ({ ...s, age: e.target.value }))} className="h-12 text-lg font-bold" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest">Huyết áp tâm thu</Label>
+                  <Input type="number" value={ascvdState.sysBp} onChange={e => setAscvdState(s => ({ ...s, sysBp: e.target.value }))} className="h-12 text-lg font-bold" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest">Cholesterol toàn phần</Label>
+                  <Input type="number" value={ascvdState.totalChol} onChange={e => setAscvdState(s => ({ ...s, totalChol: e.target.value }))} className="h-12 text-lg font-bold" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest">HDL Cholesterol</Label>
+                  <Input type="number" value={ascvdState.hdl} onChange={e => setAscvdState(s => ({ ...s, hdl: e.target.value }))} className="h-12 text-lg font-bold" />
+                </div>
               </div>
-              <TabsList className="grid w-full md:w-auto grid-cols-3 h-12 p-1 bg-muted/50">
-                <TabsTrigger value="cha2ds2vasc" className="px-6 data-[state=active]:shadow-sm">
-                  CHA₂DS₂-VASc
-                </TabsTrigger>
-                <TabsTrigger value="ascvd" className="px-6 data-[state=active]:shadow-sm">
-                  ASCVD Risk
-                </TabsTrigger>
-                <TabsTrigger value="zscore" className="px-6 data-[state=active]:shadow-sm">
-                  Z-Score
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <AnimatePresence mode="wait">
-              <TabsContent value="ascvd" key="ascvd">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.3 }}
-                  className="grid grid-cols-1 lg:grid-cols-5 gap-8"
-                >
-                  <Card className="lg:col-span-3 border-none shadow-xl shadow-black/5">
-                    <CardHeader className="bg-white border-b pb-6">
-                      <div className="flex items-center gap-2 text-primary mb-1">
-                        <Activity size={18} />
-                        <span className="text-xs font-bold uppercase tracking-widest">Atherosclerotic CVD</span>
-                      </div>
-                      <CardTitle className="text-2xl">ASCVD 10-Year Risk</CardTitle>
-                      <CardDescription>Estimate 10-year risk for first hard ASCVD event.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-bold">Age (40-79)</Label>
-                          <Input type="number" placeholder="Years" value={ascvdState.age} onChange={e => setAscvdState(s => ({ ...s, age: e.target.value }))} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-bold">Systolic BP</Label>
-                          <Input type="number" placeholder="mmHg" value={ascvdState.sysBp} onChange={e => setAscvdState(s => ({ ...s, sysBp: e.target.value }))} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-bold">Total Cholesterol</Label>
-                          <Input type="number" placeholder="mg/dL" value={ascvdState.totalChol} onChange={e => setAscvdState(s => ({ ...s, totalChol: e.target.value }))} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-bold">HDL Cholesterol</Label>
-                          <Input type="number" placeholder="mg/dL" value={ascvdState.hdl} onChange={e => setAscvdState(s => ({ ...s, hdl: e.target.value }))} />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-bold">Sex</Label>
-                          <RadioGroup value={ascvdState.sex} onValueChange={v => setAscvdState(s => ({ ...s, sex: v as any }))} className="flex gap-2">
-                            <Label className={cn("flex-1 p-2 border rounded-md text-center cursor-pointer", ascvdState.sex === 'male' && "bg-primary text-white")}>
-                              <RadioGroupItem value="male" className="sr-only" /> Male
-                            </Label>
-                            <Label className={cn("flex-1 p-2 border rounded-md text-center cursor-pointer", ascvdState.sex === 'female' && "bg-primary text-white")}>
-                              <RadioGroupItem value="female" className="sr-only" /> Female
-                            </Label>
-                          </RadioGroup>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-bold">Race</Label>
-                          <RadioGroup value={ascvdState.race} onValueChange={v => setAscvdState(s => ({ ...s, race: v as any }))} className="flex gap-2">
-                            <Label className={cn("flex-1 p-2 border rounded-md text-center cursor-pointer", ascvdState.race === 'white' && "bg-primary text-white")}>
-                              <RadioGroupItem value="white" className="sr-only" /> White
-                            </Label>
-                            <Label className={cn("flex-1 p-2 border rounded-md text-center cursor-pointer", ascvdState.race === 'aa' && "bg-primary text-white")}>
-                              <RadioGroupItem value="aa" className="sr-only" /> AA
-                            </Label>
-                          </RadioGroup>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="flex items-center justify-between p-3 border rounded-lg">
-                          <Label className="text-xs font-bold">Diabetes</Label>
-                          <Checkbox checked={ascvdState.isDiabetes} onCheckedChange={v => setAscvdState(s => ({ ...s, isDiabetes: !!v }))} />
-                        </div>
-                        <div className="flex items-center justify-between p-3 border rounded-lg">
-                          <Label className="text-xs font-bold">Smoker</Label>
-                          <Checkbox checked={ascvdState.isSmoker} onCheckedChange={v => setAscvdState(s => ({ ...s, isSmoker: !!v }))} />
-                        </div>
-                        <div className="flex items-center justify-between p-3 border rounded-lg">
-                          <Label className="text-xs font-bold">HTN Treated</Label>
-                          <Checkbox checked={ascvdState.isHypertensionTreated} onCheckedChange={v => setAscvdState(s => ({ ...s, isHypertensionTreated: !!v }))} />
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="bg-muted/30 p-4 flex justify-between">
-                      <Button variant="ghost" size="sm" onClick={resetAscvd}>
-                        <RefreshCcw size={14} className="mr-2" /> Reset
-                      </Button>
-                      <p className="text-[10px] text-muted-foreground italic">ACC/AHA 2013 Pooled Cohort Equations</p>
-                    </CardFooter>
-                  </Card>
-
-                  <div className="lg:col-span-2 space-y-6">
-                    <Card className="border-none shadow-2xl shadow-primary/10 bg-primary text-white overflow-hidden">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg font-medium opacity-90">10-Year Risk</CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 pb-8 flex flex-col items-center justify-center">
-                        <motion.div key={ascvdResult} initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="text-7xl font-black tracking-tighter">
-                          {ascvdResult || '--'}
-                        </motion.div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-none shadow-xl shadow-black/5">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Risk Category</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {ascvdResult && !ascvdResult.includes('N/A') ? (
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm font-medium">
-                              <span>Risk Level</span>
-                              <span className={cn(
-                                "font-bold",
-                                parseFloat(ascvdResult) < 5 ? "text-green-600" :
-                                parseFloat(ascvdResult) < 7.5 ? "text-yellow-600" :
-                                parseFloat(ascvdResult) < 20 ? "text-orange-600" : "text-red-600"
-                              )}>
-                                {parseFloat(ascvdResult) < 5 ? "Low Risk" :
-                                 parseFloat(ascvdResult) < 7.5 ? "Borderline" :
-                                 parseFloat(ascvdResult) < 20 ? "Intermediate" : "High Risk"}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                              {parseFloat(ascvdResult) >= 7.5 ? "Statin therapy is generally recommended for intermediate and high risk groups." : "Lifestyle modification is the primary focus for low risk groups."}
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground italic">Enter all values to see risk assessment.</p>
-                        )}
-                      </CardContent>
-                    </Card>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest">Giới tính</Label>
+                  <RadioGroup value={ascvdState.sex} onValueChange={v => setAscvdState(s => ({ ...s, sex: v as any }))} className="flex gap-2">
+                    <Label className={cn("flex-1 p-3 border rounded-xl text-center cursor-pointer font-bold", ascvdState.sex === 'male' ? "bg-primary text-white" : "bg-white/50")}>
+                      <RadioGroupItem value="male" className="sr-only" /> Nam
+                    </Label>
+                    <Label className={cn("flex-1 p-3 border rounded-xl text-center cursor-pointer font-bold", ascvdState.sex === 'female' ? "bg-primary text-white" : "bg-white/50")}>
+                      <RadioGroupItem value="female" className="sr-only" /> Nữ
+                    </Label>
+                  </RadioGroup>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest">Chủng tộc</Label>
+                  <RadioGroup value={ascvdState.race} onValueChange={v => setAscvdState(s => ({ ...s, race: v as any }))} className="flex gap-2">
+                    <Label className={cn("flex-1 p-3 border rounded-xl text-center cursor-pointer font-bold", ascvdState.race === 'white' ? "bg-primary text-white" : "bg-white/50")}>
+                      <RadioGroupItem value="white" className="sr-only" /> Da trắng
+                    </Label>
+                    <Label className={cn("flex-1 p-3 border rounded-xl text-center cursor-pointer font-bold", ascvdState.race === 'aa' ? "bg-primary text-white" : "bg-white/50")}>
+                      <RadioGroupItem value="aa" className="sr-only" /> Da màu
+                    </Label>
+                  </RadioGroup>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { id: 'dm', label: 'Tiểu đường', key: 'isDiabetes' },
+                  { id: 'sm', label: 'Hút thuốc', key: 'isSmoker' },
+                  { id: 'ht', label: 'Điều trị HA', key: 'isHypertensionTreated' },
+                ].map(item => (
+                  <div key={item.id} className="flex items-center justify-between p-4 rounded-xl border bg-white/50">
+                    <Label className="text-xs font-black uppercase tracking-widest">{item.label}</Label>
+                    <Checkbox checked={(ascvdState as any)[item.key]} onCheckedChange={v => setAscvdState(s => ({ ...s, [item.key]: !!v }))} />
                   </div>
-                </motion.div>
-              </TabsContent>
+                ))}
+              </div>
+            </CardContent>
+            <CardFooter className="bg-muted/20 p-4 flex justify-between">
+              <Button variant="ghost" size="sm" onClick={() => setAscvdState(initialAscvdState)}>
+                <RefreshCcw size={14} className="mr-2" /> Làm mới
+              </Button>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">ACC/AHA 2013</span>
+            </CardFooter>
+          </Card>
 
-              <TabsContent value="cha2ds2vasc" key="cha2ds2vasc">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.3 }}
-                  className="grid grid-cols-1 lg:grid-cols-5 gap-8"
-                >
-                  {/* Input Section */}
-                  <Card className="lg:col-span-3 border-none shadow-xl shadow-black/5 overflow-hidden">
-                    <CardHeader className="bg-white border-b pb-6">
-                      <div className="flex items-center gap-2 text-primary mb-1">
-                        <Heart size={18} className="fill-primary/10" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Atrial Fibrillation</span>
-                      </div>
-                      <CardTitle className="text-2xl">CHA₂DS₂-VASc Score</CardTitle>
-                      <CardDescription>Stroke risk assessment in patients with atrial fibrillation.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                      <div className="grid gap-4">
-                        <div className="flex items-center justify-between p-4 rounded-xl border bg-white hover:border-primary/30 transition-colors group">
-                          <div className="space-y-0.5">
-                            <Label htmlFor="hf" className="text-base font-semibold cursor-pointer">Congestive Heart Failure</Label>
-                            <p className="text-xs text-muted-foreground">Or Left Ventricular Dysfunction</p>
-                          </div>
-                          <Checkbox 
-                            id="hf" 
-                            checked={chaState.heartFailure} 
-                            onCheckedChange={(checked) => setChaState(s => ({ ...s, heartFailure: !!checked }))}
-                            className="h-6 w-6 rounded-md"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 rounded-xl border bg-white hover:border-primary/30 transition-colors">
-                          <div className="space-y-0.5">
-                            <Label htmlFor="ht" className="text-base font-semibold cursor-pointer">Hypertension</Label>
-                            <p className="text-xs text-muted-foreground">Blood pressure consistently {'>'}140/90 mmHg</p>
-                          </div>
-                          <Checkbox 
-                            id="ht" 
-                            checked={chaState.hypertension} 
-                            onCheckedChange={(checked) => setChaState(s => ({ ...s, hypertension: !!checked }))}
-                            className="h-6 w-6 rounded-md"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 rounded-xl border bg-white hover:border-primary/30 transition-colors">
-                          <div className="space-y-0.5">
-                            <Label htmlFor="dm" className="text-base font-semibold cursor-pointer">Diabetes Mellitus</Label>
-                            <p className="text-xs text-muted-foreground">Fasting glucose {'>'}126 mg/dL or treatment</p>
-                          </div>
-                          <Checkbox 
-                            id="dm" 
-                            checked={chaState.diabetes} 
-                            onCheckedChange={(checked) => setChaState(s => ({ ...s, diabetes: !!checked }))}
-                            className="h-6 w-6 rounded-md"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 rounded-xl border bg-white hover:border-primary/30 transition-colors">
-                          <div className="space-y-0.5">
-                            <Label htmlFor="stroke" className="text-base font-semibold cursor-pointer">Stroke / TIA / TE</Label>
-                            <p className="text-xs text-muted-foreground">History of stroke, TIA or thromboembolism (+2)</p>
-                          </div>
-                          <Checkbox 
-                            id="stroke" 
-                            checked={chaState.stroke} 
-                            onCheckedChange={(checked) => setChaState(s => ({ ...s, stroke: !!checked }))}
-                            className="h-6 w-6 rounded-md border-primary/50 data-[state=checked]:bg-primary"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 rounded-xl border bg-white hover:border-primary/30 transition-colors">
-                          <div className="space-y-0.5">
-                            <Label htmlFor="vascular" className="text-base font-semibold cursor-pointer">Vascular Disease</Label>
-                            <p className="text-xs text-muted-foreground">Prior MI, PAD, or aortic plaque</p>
-                          </div>
-                          <Checkbox 
-                            id="vascular" 
-                            checked={chaState.vascular} 
-                            onCheckedChange={(checked) => setChaState(s => ({ ...s, vascular: !!checked }))}
-                            className="h-6 w-6 rounded-md"
-                          />
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div className="space-y-4">
-                        <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Age Category</Label>
-                        <RadioGroup 
-                          value={chaState.age} 
-                          onValueChange={(v) => setChaState(s => ({ ...s, age: v as any }))}
-                          className="grid grid-cols-3 gap-4"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="under65" id="age1" className="sr-only" />
-                            <Label 
-                              htmlFor="age1" 
-                              className={cn(
-                                "flex-1 text-center py-3 px-2 rounded-lg border cursor-pointer transition-all",
-                                chaState.age === 'under65' ? "bg-primary text-white border-primary shadow-md" : "bg-white hover:bg-muted"
-                              )}
-                            >
-                              {'<'} 65
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="65to74" id="age2" className="sr-only" />
-                            <Label 
-                              htmlFor="age2" 
-                              className={cn(
-                                "flex-1 text-center py-3 px-2 rounded-lg border cursor-pointer transition-all",
-                                chaState.age === '65to74' ? "bg-primary text-white border-primary shadow-md" : "bg-white hover:bg-muted"
-                              )}
-                            >
-                              65 - 74
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="over75" id="age3" className="sr-only" />
-                            <Label 
-                              htmlFor="age3" 
-                              className={cn(
-                                "flex-1 text-center py-3 px-2 rounded-lg border cursor-pointer transition-all",
-                                chaState.age === 'over75' ? "bg-primary text-white border-primary shadow-md" : "bg-white hover:bg-muted"
-                              )}
-                            >
-                              ≥ 75
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-
-                      <div className="space-y-4">
-                        <Label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Sex Category</Label>
-                        <RadioGroup 
-                          value={chaState.sex} 
-                          onValueChange={(v) => setChaState(s => ({ ...s, sex: v as any }))}
-                          className="grid grid-cols-2 gap-4"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="male" id="sex1" className="sr-only" />
-                            <Label 
-                              htmlFor="sex1" 
-                              className={cn(
-                                "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border cursor-pointer transition-all",
-                                chaState.sex === 'male' ? "bg-primary text-white border-primary shadow-md" : "bg-white hover:bg-muted"
-                              )}
-                            >
-                              <User size={16} /> Nam
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="female" id="sex2" className="sr-only" />
-                            <Label 
-                              htmlFor="sex2" 
-                              className={cn(
-                                "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border cursor-pointer transition-all",
-                                chaState.sex === 'female' ? "bg-primary text-white border-primary shadow-md" : "bg-white hover:bg-muted"
-                              )}
-                            >
-                              <User size={16} /> Nữ
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="bg-muted/30 p-4 flex justify-between">
-                      <Button variant="ghost" size="sm" onClick={resetCha} className="text-muted-foreground hover:text-destructive">
-                        <RefreshCcw size={14} className="mr-2" /> Reset
-                      </Button>
-                      <p className="text-[10px] text-muted-foreground italic">Source: ESC Guidelines 2020</p>
-                    </CardFooter>
-                  </Card>
-
-                  {/* Result Section */}
-                  <div className="lg:col-span-2 space-y-6">
-                    <Card className="border-none shadow-2xl shadow-primary/10 bg-primary text-white overflow-hidden">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg font-medium opacity-90">Total Score</CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 pb-8 flex flex-col items-center justify-center">
-                        <motion.div 
-                          key={chaScore}
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          className="text-8xl font-black tracking-tighter"
-                        >
-                          {chaScore}
-                        </motion.div>
-                        <div className="mt-4 px-4 py-1.5 bg-white/20 rounded-full text-sm font-semibold backdrop-blur-sm">
-                          Points
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-none shadow-xl shadow-black/5">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Clinical Risk</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Stroke Risk / Year</span>
-                          <span className="text-xl font-bold text-primary">{getStrokeRisk(chaScore)}</span>
-                        </div>
-                        <Separator />
-                        <div className="space-y-2">
-                          <span className="text-sm font-medium flex items-center gap-2">
-                            <Info size={14} className="text-primary" />
-                            Recommendation
-                          </span>
-                          <p className="text-sm leading-relaxed text-muted-foreground bg-muted/50 p-3 rounded-lg border border-dashed">
-                            {getRecommendation(chaScore, chaState.sex)}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-none shadow-xl shadow-black/5 bg-amber-50 border-l-4 border-l-amber-400">
-                      <CardContent className="p-4">
-                        <div className="flex gap-3">
-                          <Activity className="text-amber-500 shrink-0" size={20} />
-                          <div className="space-y-1">
-                            <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">Clinical Note</p>
-                            <p className="text-xs text-amber-700 leading-relaxed">
-                              This tool is for professional use only. Clinical judgment should always prevail over calculated scores.
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="border-none bg-primary text-white shadow-2xl shadow-primary/30 overflow-hidden rounded-3xl">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-lg font-medium opacity-80">Nguy cơ 10 năm</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center py-10">
+                <div className="text-7xl font-black tracking-tighter">{ascvdResult || '--'}</div>
+                <div className="mt-4 px-6 py-2 bg-white/20 rounded-full text-sm font-black uppercase tracking-widest backdrop-blur-md">Xác suất</div>
+              </CardContent>
+            </Card>
+            <Card className="border-none glass-card rounded-3xl">
+              <CardHeader>
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-primary">Phân loại nguy cơ</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {ascvdResult && !ascvdResult.includes('N/A') ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold">Mức độ</span>
+                      <span className={cn(
+                        "px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest",
+                        parseFloat(ascvdResult) < 5 ? "bg-green-100 text-green-700" :
+                        parseFloat(ascvdResult) < 7.5 ? "bg-yellow-100 text-yellow-700" :
+                        parseFloat(ascvdResult) < 20 ? "bg-orange-100 text-orange-700" : "bg-red-100 text-red-700"
+                      )}>
+                        {parseFloat(ascvdResult) < 5 ? "Thấp" :
+                         parseFloat(ascvdResult) < 7.5 ? "Giới hạn" :
+                         parseFloat(ascvdResult) < 20 ? "Trung bình" : "Cao"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                      {parseFloat(ascvdResult) >= 7.5 ? "Cân nhắc liệu pháp Statin cường độ trung bình đến cao." : "Tập trung vào thay đổi lối sống và kiểm soát các yếu tố nguy cơ."}
+                    </p>
                   </div>
-                </motion.div>
-              </TabsContent>
-
-              <TabsContent value="zscore" key="zscore">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="grid grid-cols-1 lg:grid-cols-5 gap-8"
-                >
-                  <Card className="lg:col-span-3 border-none shadow-xl shadow-black/5">
-                    <CardHeader>
-                      <div className="flex items-center gap-2 text-primary mb-1">
-                        <TrendingUp size={18} />
-                        <span className="text-xs font-bold uppercase tracking-widest">Statistics</span>
-                      </div>
-                      <CardTitle className="text-2xl">General Z-Score</CardTitle>
-                      <CardDescription>Calculate standard score for any medical parameter.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-8">
-                      <div className="space-y-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="val" className="text-sm font-bold">Measured Value (x)</Label>
-                          <div className="relative">
-                            <Input 
-                              id="val" 
-                              type="number" 
-                              placeholder="e.g. 15.5" 
-                              value={zState.value}
-                              onChange={(e) => setZState(s => ({ ...s, value: e.target.value }))}
-                              className="h-12 pl-4 text-lg"
-                            />
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground font-mono text-xs">Value</div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="mean" className="text-sm font-bold">Mean (μ)</Label>
-                            <Input 
-                              id="mean" 
-                              type="number" 
-                              placeholder="e.g. 12.0" 
-                              value={zState.mean}
-                              onChange={(e) => setZState(s => ({ ...s, mean: e.target.value }))}
-                              className="h-12"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="sd" className="text-sm font-bold">Std Dev (σ)</Label>
-                            <Input 
-                              id="sd" 
-                              type="number" 
-                              placeholder="e.g. 1.5" 
-                              value={zState.sd}
-                              onChange={(e) => setZState(s => ({ ...s, sd: e.target.value }))}
-                              className="h-12"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-6 bg-muted/30 rounded-2xl border border-dashed flex flex-col items-center justify-center space-y-2">
-                        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Formula</p>
-                        <div className="text-xl font-mono italic text-primary">
-                          Z = (x - μ) / σ
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="bg-muted/30 p-4 flex justify-between">
-                      <Button variant="ghost" size="sm" onClick={resetZ} className="text-muted-foreground hover:text-destructive">
-                        <RefreshCcw size={14} className="mr-2" /> Reset
-                      </Button>
-                    </CardFooter>
-                  </Card>
-
-                  <div className="lg:col-span-2 space-y-6">
-                    <Card className={cn(
-                      "border-none transition-all duration-500 overflow-hidden",
-                      zResult !== null ? "shadow-2xl shadow-primary/20 bg-primary text-white" : "bg-muted text-muted-foreground"
-                    )}>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg font-medium opacity-90">Calculated Z-Score</CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 pb-8 flex flex-col items-center justify-center">
-                        <motion.div 
-                          key={zResult}
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          className="text-7xl font-black tracking-tighter"
-                        >
-                          {zResult !== null ? zResult.toFixed(2) : '--'}
-                        </motion.div>
-                        <div className="mt-4 px-4 py-1.5 bg-white/20 rounded-full text-sm font-semibold backdrop-blur-sm">
-                          Standard Deviations
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {zResult !== null && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                      >
-                        <Card className="border-none shadow-xl shadow-black/5">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Interpretation</CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">Status</span>
-                              <span className={cn(
-                                "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
-                                Math.abs(zResult) <= 2 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                              )}>
-                                {Math.abs(zResult) <= 2 ? "Normal Range" : "Abnormal Range"}
-                              </span>
-                            </div>
-                            <Separator />
-                            <div className="space-y-3">
-                              <div className="flex justify-between text-xs">
-                                <span>-3σ</span>
-                                <span>-2σ</span>
-                                <span>-1σ</span>
-                                <span>0</span>
-                                <span>+1σ</span>
-                                <span>+2σ</span>
-                                <span>+3σ</span>
-                              </div>
-                              <div className="h-3 w-full bg-muted rounded-full relative overflow-hidden">
-                                <div className="absolute inset-y-0 left-1/3 right-1/3 bg-green-500/20" />
-                                <motion.div 
-                                  className="absolute top-0 bottom-0 w-1 bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)] z-10"
-                                  initial={{ left: '50%' }}
-                                  animate={{ left: `${Math.max(0, Math.min(100, (zResult + 4) * 12.5))}%` }}
-                                  transition={{ type: 'spring', stiffness: 100 }}
-                                />
-                              </div>
-                              <p className="text-[10px] text-muted-foreground text-center italic">
-                                Normal range is typically between -2 and +2 Z-scores.
-                              </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    )}
-
-                    <Card className="border-none shadow-xl shadow-black/5">
-                      <CardHeader>
-                        <CardTitle className="text-sm font-bold">Quick Reference</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        <ScrollArea className="h-[180px] px-6 pb-6">
-                          <div className="space-y-4">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Z = 0</span>
-                              <span className="font-medium">50th Percentile</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Z = +1.645</span>
-                              <span className="font-medium">95th Percentile</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Z = +1.96</span>
-                              <span className="font-medium">97.5th Percentile</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Z = +2.33</span>
-                              <span className="font-medium">99th Percentile</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Z = -2.0</span>
-                              <span className="font-medium">2.3rd Percentile</span>
-                            </div>
-                          </div>
-                        </ScrollArea>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </motion.div>
-              </TabsContent>
-            </AnimatePresence>
-          </Tabs>
-        </motion.div>
-
-        {/* Footer Info */}
-        <footer className="mt-16 pt-8 border-t text-center space-y-4">
-          <div className="flex items-center justify-center gap-4">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Calculator size={12} />
-              <span>Evidence-Based</span>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Heart size={12} />
-              <span>Clinical Support</span>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Activity size={12} />
-              <span>Real-time Calc</span>
-            </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Nhập đầy đủ thông tin để xem đánh giá.</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
-          <p className="text-[10px] text-muted-foreground max-w-md mx-auto leading-relaxed">
-            Disclaimer: These calculators are intended for use by healthcare professionals. They are not a substitute for professional medical advice, diagnosis, or treatment.
-          </p>
-        </footer>
-      </main>
+        </div>
+      )}
+
+      {id === 'zscore' && (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <Card className="lg:col-span-3 border-none glass-card overflow-hidden">
+            <CardHeader className="bg-primary/5 border-b">
+              <CardTitle className="text-2xl text-primary">Z-Score Calculator</CardTitle>
+              <CardDescription>Tính toán độ lệch chuẩn so với giá trị trung bình quần thể.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-8">
+              <div className="space-y-4">
+                <Label className="text-xs font-black uppercase tracking-widest">Giá trị đo được (x)</Label>
+                <Input type="number" placeholder="VD: 15.5" value={zState.value} onChange={e => setZState(s => ({ ...s, value: e.target.value }))} className="h-14 text-2xl font-black text-primary" />
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest">Trung bình (μ)</Label>
+                  <Input type="number" placeholder="VD: 12.0" value={zState.mean} onChange={e => setZState(s => ({ ...s, mean: e.target.value }))} className="h-12 font-bold" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-widest">Độ lệch chuẩn (σ)</Label>
+                  <Input type="number" placeholder="VD: 1.5" value={zState.sd} onChange={e => setZState(s => ({ ...s, sd: e.target.value }))} className="h-12 font-bold" />
+                </div>
+              </div>
+              <div className="p-8 bg-primary/5 rounded-3xl border border-dashed border-primary/30 flex flex-col items-center justify-center space-y-3">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">Công thức chuẩn</span>
+                <div className="text-3xl font-serif italic text-primary">Z = (x - μ) / σ</div>
+              </div>
+            </CardContent>
+            <CardFooter className="bg-muted/20 p-4">
+              <Button variant="ghost" size="sm" onClick={() => setZState({ value: '', mean: '', sd: '' })}>
+                <RefreshCcw size={14} className="mr-2" /> Làm mới
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <div className="lg:col-span-2 space-y-6">
+            <Card className={cn("border-none shadow-2xl transition-all duration-500 rounded-3xl overflow-hidden", zResult !== null ? "bg-primary text-white shadow-primary/30" : "bg-muted text-muted-foreground")}>
+              <CardHeader className="pb-0">
+                <CardTitle className="text-lg font-medium opacity-80">Z-Score</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center py-10">
+                <div className="text-8xl font-black tracking-tighter">{zResult !== null ? zResult.toFixed(2) : '--'}</div>
+                <div className="mt-4 px-6 py-2 bg-white/20 rounded-full text-sm font-black uppercase tracking-widest backdrop-blur-md">SD Units</div>
+              </CardContent>
+            </Card>
+            {zResult !== null && (
+              <Card className="border-none glass-card rounded-3xl">
+                <CardHeader>
+                  <CardTitle className="text-sm font-black uppercase tracking-widest text-primary">Phân tích</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-bold">Trạng thái</span>
+                    <span className={cn("px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest", Math.abs(zResult) <= 2 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
+                      {Math.abs(zResult) <= 2 ? "Bình thường" : "Bất thường"}
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="h-4 w-full bg-muted rounded-full relative overflow-hidden">
+                      <div className="absolute inset-y-0 left-1/4 right-1/4 bg-green-500/20" />
+                      <motion.div 
+                        className="absolute top-0 bottom-0 w-1.5 bg-primary shadow-[0_0_12px_rgba(var(--primary),0.8)] z-10"
+                        initial={{ left: '50%' }}
+                        animate={{ left: `${Math.max(0, Math.min(100, (zResult + 4) * 12.5))}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] font-black text-muted-foreground">
+                      <span>-4</span><span>-2</span><span>0</span><span>+2</span><span>+4</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+};
+
+const AdminPage = () => (
+  <div className="space-y-8">
+    <div className="flex items-center gap-4">
+      <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center text-primary">
+        <ShieldCheck size={32} />
+      </div>
+      <div>
+        <h2 className="text-3xl font-black tracking-tight text-primary">Quản trị viên</h2>
+        <p className="text-muted-foreground">Quản lý cấu hình hệ thống và dữ liệu lâm sàng.</p>
+      </div>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[
+        { title: 'Cấu hình App', desc: 'Thay đổi các tham số tính toán và ngưỡng khuyến cáo.', icon: <Calculator /> },
+        { title: 'Dữ liệu người dùng', desc: 'Xem lịch sử sử dụng và thống kê truy cập.', icon: <User /> },
+        { title: 'Bản cập nhật', desc: 'Kiểm tra và áp dụng các hướng dẫn y khoa mới nhất.', icon: <RefreshCcw /> }
+      ].map((item, i) => (
+        <Card key={i} className="glass-card border-none hover:shadow-2xl transition-all cursor-pointer">
+          <CardHeader>
+            <div className="w-10 h-10 bg-primary/5 rounded-xl flex items-center justify-center text-primary mb-2">
+              {item.icon}
+            </div>
+            <CardTitle className="text-lg">{item.title}</CardTitle>
+            <CardDescription>{item.desc}</CardDescription>
+          </CardHeader>
+        </Card>
+      ))}
+    </div>
+    
+    <Card className="border-none glass-card p-12 text-center space-y-4">
+      <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto text-primary/40">
+        <Info size={40} />
+      </div>
+      <h3 className="text-xl font-bold">Tính năng đang phát triển</h3>
+      <p className="text-muted-foreground max-w-md mx-auto">Hệ thống quản trị đang được hoàn thiện để cung cấp khả năng tùy biến cao hơn cho các cơ sở y tế.</p>
+    </Card>
+  </div>
+);
+
+const ViewerPage = () => (
+  <div className="space-y-8">
+    <div className="flex items-center gap-4">
+      <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center text-primary">
+        <Eye size={32} />
+      </div>
+      <div>
+        <h2 className="text-3xl font-black tracking-tight text-primary">Trang Người xem</h2>
+        <p className="text-muted-foreground">Dành cho bệnh nhân và người nhà tìm hiểu thông tin.</p>
+      </div>
+    </div>
+
+    <Card className="border-none glass-card overflow-hidden">
+      <div className="h-48 bg-primary/10 flex items-center justify-center">
+        <Heart size={80} className="text-primary/20 animate-pulse" />
+      </div>
+      <CardHeader>
+        <CardTitle className="text-2xl">Kiến thức Tim mạch phổ thông</CardTitle>
+        <CardDescription>Tìm hiểu về các yếu tố nguy cơ và cách bảo vệ trái tim của bạn.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 bg-white/50 rounded-3xl border border-primary/10 space-y-2">
+            <h4 className="font-bold text-primary">Rung nhĩ là gì?</h4>
+            <p className="text-sm text-muted-foreground">Rung nhĩ là một dạng rối loạn nhịp tim phổ biến có thể dẫn đến đột quỵ nếu không được điều trị.</p>
+          </div>
+          <div className="p-6 bg-white/50 rounded-3xl border border-primary/10 space-y-2">
+            <h4 className="font-bold text-primary">Kiểm soát huyết áp</h4>
+            <p className="text-sm text-muted-foreground">Duy trì huyết áp dưới 130/80 mmHg giúp giảm đáng kể nguy cơ biến cố tim mạch.</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Dashboard />} />
+        <Route path="calc/:id" element={<CalculatorPage />} />
+        <Route path="admin" element={<AdminPage />} />
+        <Route path="viewer" element={<ViewerPage />} />
+      </Route>
+    </Routes>
   );
 }
