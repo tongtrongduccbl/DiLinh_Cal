@@ -1,0 +1,5 @@
+{
+  "name": "Medical Calc: CHA2DS2-VASc & Z-Score",
+  "description": "A professional medical calculator for CHA2DS2-VASc stroke risk and Z-score calculations.",
+  "requestFramePermissions": []
+}
