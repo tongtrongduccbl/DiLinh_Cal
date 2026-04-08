@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, FormEvent } from 'react';
 import { 
   Routes, 
   Route, 
@@ -22,7 +22,11 @@ import {
   Eye,
   ArrowLeft,
   FileText,
-  Settings
+  Settings,
+  BookOpen,
+  ClipboardList,
+  Search,
+  Smartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '@/components/ui/button';
@@ -149,9 +153,79 @@ const calculateAscvd = (state: AscvdState) => {
 
 // --- Components ---
 
-const Layout = () => {
-  const [userInfo, setUserInfo] = useState({ name: '', department: '' });
+const LoginScreen = ({ onLogin }: { onLogin: (name: string, dept: string) => void }) => {
+  const [name, setName] = useState('');
+  const [dept, setDept] = useState('');
 
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (name.trim() && dept.trim()) {
+      onLogin(name.trim(), dept.trim());
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA] p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md"
+      >
+        <Card className="clinical-card border-t-4 border-t-primary">
+          <CardHeader className="text-center space-y-2">
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto mb-2">
+              <Stethoscope size={32} />
+            </div>
+            <CardTitle className="text-2xl font-bold text-slate-800">DI LINH HOSPITAL CALC</CardTitle>
+            <CardDescription className="text-sm font-medium uppercase tracking-widest">Xác thực nhân viên y tế</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="login-name" className="text-xs font-bold uppercase tracking-widest text-slate-500">Họ và tên bác sĩ</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Input 
+                    id="login-name"
+                    placeholder="VD: Nguyễn Văn A" 
+                    className="pl-10 h-12 font-bold"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="login-dept" className="text-xs font-bold uppercase tracking-widest text-slate-500">Khoa công tác</Label>
+                <div className="relative">
+                  <Activity className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Input 
+                    id="login-dept"
+                    placeholder="VD: Khoa Nội Tim Mạch" 
+                    className="pl-10 h-12 font-bold"
+                    value={dept}
+                    onChange={e => setDept(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <Button type="submit" className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20">
+                Truy cập hệ thống
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="justify-center border-t border-slate-50 bg-slate-50/50 p-4">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
+              Hệ thống hỗ trợ quyết định lâm sàng nội bộ
+            </p>
+          </CardFooter>
+        </Card>
+      </motion.div>
+    </div>
+  );
+};
+
+const Layout = ({ userInfo, onLogout }: { userInfo: { name: string, department: string }, onLogout: () => void }) => {
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FA] text-slate-900 font-sans">
       {/* Clinical Header */}
@@ -182,19 +256,14 @@ const Layout = () => {
             
             <Separator orientation="vertical" className="h-8 hidden md:block" />
 
-            <div className="flex gap-2">
-              <Input 
-                placeholder="Bác sĩ" 
-                className="h-8 w-32 text-xs bg-white border-slate-200"
-                value={userInfo.name}
-                onChange={(e) => setUserInfo(s => ({ ...s, name: e.target.value }))}
-              />
-              <Input 
-                placeholder="Khoa" 
-                className="h-8 w-32 text-xs bg-white border-slate-200"
-                value={userInfo.department}
-                onChange={(e) => setUserInfo(s => ({ ...s, department: e.target.value }))}
-              />
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-bold text-slate-700 leading-none">{userInfo.name}</p>
+                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{userInfo.department}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={onLogout} className="h-8 w-8 text-slate-400 hover:text-red-500">
+                <RefreshCcw size={16} />
+              </Button>
             </div>
           </div>
         </div>
@@ -205,37 +274,69 @@ const Layout = () => {
       </main>
 
       {/* Professional Footer */}
-      <footer className="bg-white border-t border-slate-200 py-8">
+      <footer className="bg-white border-t border-slate-200 py-12">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Stethoscope size={20} />
-              <span className="font-bold text-sm uppercase tracking-widest">DI LINH HOSPITAL CALC</span>
-            </div>
-            
-            <div className="flex items-center gap-8 text-xs font-medium text-slate-500">
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck size={14} className="text-primary" />
-                <span>Bảo mật dữ liệu</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-primary">
+                <Stethoscope size={24} />
+                <span className="font-bold text-lg uppercase tracking-tight">DI LINH HOSPITAL CALC</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <FileText size={14} className="text-primary" />
-                <span>Hướng dẫn ESC/ACC</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Activity size={14} className="text-primary" />
-                <span>Thời gian thực</span>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Hệ thống hỗ trợ quyết định lâm sàng được thiết kế để tối ưu hóa quy trình làm việc của bác sĩ tại Bệnh viện Di Linh.
+              </p>
+              <div className="pt-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Người tạo chương trình</p>
+                <p className="text-sm font-bold text-slate-700">BS. TỐNG TRỌNG ĐỨC</p>
               </div>
             </div>
 
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
-              © 2026 DI LINH HOSPITAL
-            </p>
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Hỗ trợ phát triển</h4>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Sự ủng hộ của quý đồng nghiệp là động lực để ứng dụng ngày càng hoàn thiện và phát triển thêm nhiều tính năng mới.
+              </p>
+              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="w-24 h-24 bg-white p-1 rounded-lg shadow-sm flex-shrink-0">
+                  <img 
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://me.momo.vn/0358740165" 
+                    alt="QR Code Support" 
+                    className="w-full h-full object-contain"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Quét mã QR</p>
+                  <p className="text-[11px] font-medium text-slate-500 italic">"Xin tài trợ để ứng dụng ngày càng phát triển"</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Tiêu chuẩn y khoa</h4>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                  <ShieldCheck size={14} className="text-primary" />
+                  <span>Bảo mật dữ liệu nội bộ</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                  <FileText size={14} className="text-primary" />
+                  <span>Hướng dẫn ESC/ACC 2026</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                  <Activity size={14} className="text-primary" />
+                  <span>Cập nhật thời gian thực</span>
+                </div>
+              </div>
+            </div>
           </div>
           
-          <div className="mt-6 pt-6 border-t border-slate-100 text-center">
-            <p className="text-[10px] text-slate-400 max-w-2xl mx-auto leading-relaxed">
-              CẢNH BÁO: Các công cụ này chỉ dành cho nhân viên y tế chuyên nghiệp. Kết quả tính toán chỉ mang tính chất tham khảo và không thay thế cho chẩn đoán lâm sàng của bác sĩ.
+          <div className="mt-12 pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+              © 2026 DI LINH HOSPITAL • PHÁT TRIỂN BỞI TỐNG TRỌNG ĐỨC
+            </p>
+            <p className="text-[10px] text-slate-400 max-w-md text-center md:text-right leading-relaxed italic">
+              CẢNH BÁO: Kết quả tính toán chỉ mang tính chất tham khảo và không thay thế cho chẩn đoán lâm sàng của bác sĩ.
             </p>
           </div>
         </div>
@@ -244,8 +345,9 @@ const Layout = () => {
   );
 };
 
+
 const Dashboard = () => {
-  const apps = [
+  const calculators = [
     {
       id: 'cha2ds2vasc',
       title: 'CHA₂DS₂-VASc',
@@ -269,23 +371,91 @@ const Dashboard = () => {
     }
   ];
 
+  const pocketTools = [
+    {
+      id: 'guidelines',
+      title: 'Phác đồ Điều trị',
+      desc: 'Tra cứu nhanh các phác đồ điều trị nội khoa cập nhật.',
+      icon: <BookOpen className="text-primary" />,
+      tag: 'Guidelines'
+    },
+    {
+      id: 'med-calc',
+      title: 'Liều lượng Thuốc',
+      desc: 'Tính toán liều lượng thuốc theo cân nặng và chức năng thận.',
+      icon: <ClipboardList className="text-primary" />,
+      tag: 'Medication'
+    },
+    {
+      id: 'lab-ref',
+      title: 'Chỉ số Xét nghiệm',
+      desc: 'Bảng tra cứu các chỉ số xét nghiệm bình thường.',
+      icon: <Search className="text-primary" />,
+      tag: 'Lab Values'
+    }
+  ];
+
   return (
-    <div className="space-y-8">
-      <div className="border-l-4 border-primary pl-4 py-1">
-        <h2 className="text-2xl font-bold text-slate-800">Công cụ Tính toán Lâm sàng</h2>
-        <p className="text-slate-500 text-sm">Chọn một công cụ để bắt đầu đánh giá bệnh nhân.</p>
+    <div className="space-y-12">
+      {/* Section 1: Calculators */}
+      <div className="space-y-6">
+        <div className="border-l-4 border-primary pl-4 py-1">
+          <h2 className="text-2xl font-bold text-slate-800">Công cụ Tính toán Lâm sàng</h2>
+          <p className="text-slate-500 text-sm">Các thuật toán hỗ trợ chẩn đoán và tiên lượng.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {calculators.map((app, idx) => (
+            <motion.div
+              key={app.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+            >
+              <Link to={`/calc/${app.id}`}>
+                <Card className="clinical-card h-full flex flex-col no-underline">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-100">
+                        {app.icon}
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
+                        {app.tag}
+                      </span>
+                    </div>
+                    <CardTitle className="text-lg text-slate-800">{app.title}</CardTitle>
+                    <CardDescription className="text-xs leading-relaxed min-h-[32px]">
+                      {app.desc}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardFooter className="mt-auto pt-4 border-t border-slate-50">
+                    <div className="flex items-center text-xs font-bold text-primary uppercase tracking-wider gap-1 group">
+                      Mở công cụ <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </CardFooter>
+                </Card>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {apps.map((app, idx) => (
-          <motion.div
-            key={app.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.05 }}
-          >
-            <Link to={`/calc/${app.id}`}>
-              <Card className="clinical-card h-full flex flex-col">
+      {/* Section 2: Pocket Tools */}
+      <div className="space-y-6">
+        <div className="border-l-4 border-primary pl-4 py-1">
+          <h2 className="text-2xl font-bold text-slate-800">Sổ tay Lâm sàng (Pocket)</h2>
+          <p className="text-slate-500 text-sm">Tra cứu nhanh thông tin y khoa tại giường bệnh.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {pocketTools.map((app, idx) => (
+            <motion.div
+              key={app.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (idx + 3) * 0.05 }}
+            >
+              <Card className="clinical-card h-full flex flex-col opacity-75 grayscale-[0.5] cursor-not-allowed">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start mb-2">
                     <div className="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center border border-slate-100">
@@ -301,14 +471,14 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardFooter className="mt-auto pt-4 border-t border-slate-50">
-                  <div className="flex items-center text-xs font-bold text-primary uppercase tracking-wider gap-1 group">
-                    Mở công cụ <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  <div className="flex items-center text-xs font-bold text-slate-400 uppercase tracking-wider gap-1">
+                    Sắp ra mắt
                   </div>
                 </CardFooter>
               </Card>
-            </Link>
-          </motion.div>
-        ))}
+            </motion.div>
+          ))}
+        </div>
       </div>
 
       <Card className="bg-slate-900 text-white border-none p-8 rounded-xl overflow-hidden relative">
@@ -765,9 +935,29 @@ const ViewerPage = () => (
 );
 
 export default function App() {
+  const [userInfo, setUserInfo] = useState<{ name: string; department: string } | null>(() => {
+    const saved = localStorage.getItem('hospital_user_info');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const handleLogin = (name: string, department: string) => {
+    const info = { name, department };
+    setUserInfo(info);
+    localStorage.setItem('hospital_user_info', JSON.stringify(info));
+  };
+
+  const handleLogout = () => {
+    setUserInfo(null);
+    localStorage.removeItem('hospital_user_info');
+  };
+
+  if (!userInfo) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
+      <Route path="/" element={<Layout userInfo={userInfo} onLogout={handleLogout} />}>
         <Route index element={<Dashboard />} />
         <Route path="calc/:id" element={<CalculatorPage />} />
         <Route path="admin" element={<AdminPage />} />

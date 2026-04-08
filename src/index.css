@@ -78,8 +78,12 @@
     @apply bg-[#F8F9FA] text-foreground min-h-screen;
     }
   html {
-    @apply font-sans;
+    @apply font-sans antialiased;
+    text-rendering: optimizeLegibility;
     }
+  a {
+    @apply no-underline;
+  }
 }
 
 @layer utilities {
