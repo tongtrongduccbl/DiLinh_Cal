@@ -296,7 +296,7 @@ const Layout = ({ userInfo, onLogout }: { userInfo: { name: string, department: 
             <div className="space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Hỗ trợ phát triển</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Sự ủng hộ của quý đồng nghiệp là động lực để ứng dụng ngày càng hoàn thiện và phát triển thêm nhiều tính năng mới.
+                Mọi sự đóng góp, dù là nhỏ nhất, đều là nguồn động lực quý giá để chúng tôi tiếp tục hoàn thiện và phát triển ứng dụng này.
               </p>
               <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
                 <div className="w-24 h-24 bg-white p-1 rounded-lg shadow-sm flex-shrink-0">
@@ -309,7 +309,7 @@ const Layout = ({ userInfo, onLogout }: { userInfo: { name: string, department: 
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Quét mã QR</p>
-                  <p className="text-[11px] font-medium text-slate-500 italic">"Xin tài trợ để ứng dụng ngày càng phát triển"</p>
+                  <p className="text-[11px] font-medium text-slate-500 italic">"Đóng góp hỗ trợ phát triển ứng dụng"</p>
                 </div>
               </div>
             </div>
@@ -1025,6 +1025,62 @@ const CalculatorPage = () => {
                     "{getRecommendation(chaScore)}"
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {id === 'zscore_hf' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-7 space-y-6">
+            <Card className="clinical-card">
+              <CardHeader className="border-b border-slate-50 bg-slate-50/50">
+                <CardTitle className="text-xl text-slate-800">Z-Score HF</CardTitle>
+                <CardDescription>Tính toán Z-Score cho các chỉ số tim mạch trong suy tim.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Giá trị đo được (Value)</Label>
+                    <Input type="number" value={zState.value} onChange={e => setZState(s => ({ ...s, value: e.target.value }))} className="h-10 font-bold" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Giá trị trung bình (Mean)</Label>
+                    <Input type="number" value={zState.mean} onChange={e => setZState(s => ({ ...s, mean: e.target.value }))} className="h-10 font-bold" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Độ lệch chuẩn (SD)</Label>
+                    <Input type="number" value={zState.sd} onChange={e => setZState(s => ({ ...s, sd: e.target.value }))} className="h-10 font-bold" />
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="bg-slate-50 p-4 flex justify-between">
+                <Button variant="outline" size="sm" onClick={() => setZState({ value: '', mean: '', sd: '' })} className="h-8 text-xs font-bold">
+                  <RefreshCcw size={12} className="mr-2" /> Làm mới
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+          <div className="lg:col-span-5 space-y-6">
+            <Card className="clinical-card border-primary/20 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Kết quả Z-Score</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center py-8">
+                <div className="text-7xl font-black text-primary tracking-tighter">{zResult !== null ? zResult.toFixed(2) : '--'}</div>
+                <div className="mt-2 text-sm font-bold text-slate-600 uppercase tracking-widest">Độ lệch chuẩn</div>
+              </CardContent>
+            </Card>
+            <Card className="clinical-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Giải thích</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-slate-500 leading-relaxed font-medium italic">
+                  Z-score cho biết giá trị đo được nằm cách giá trị trung bình bao nhiêu độ lệch chuẩn. 
+                  Trong tim mạch, Z-score thường được dùng để đánh giá kích thước các buồng tim và mạch máu.
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -2228,7 +2284,7 @@ const CalculatorPage = () => {
         </div>
       )}
 
-      {id !== 'cha2ds2va' && id !== 'ascvd' && id !== 'clcr' && id !== 'egfr' && id !== 'childpugh' && id !== 'ldlc' && id !== 'hasbled' && id !== 'glasgow' && id !== 'curb65' && id !== 'sofa' && id !== 'arc_hbr' && id !== 'score2' && id !== 'score2_diabetes' && id !== 'prevent' && (
+      {id !== 'cha2ds2va' && id !== 'ascvd' && id !== 'clcr' && id !== 'egfr' && id !== 'childpugh' && id !== 'ldlc' && id !== 'hasbled' && id !== 'glasgow' && id !== 'curb65' && id !== 'sofa' && id !== 'arc_hbr' && id !== 'score2' && id !== 'score2_diabetes' && id !== 'prevent' && id !== 'zscore_hf' && (
         <div className="max-w-2xl mx-auto mt-12">
           <Card className="clinical-card border-dashed border-2 border-slate-200 bg-slate-50/50">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center space-y-4">

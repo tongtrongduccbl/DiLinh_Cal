@@ -1,5 +1,5 @@
 {
   "name": "TTD Ver 1.1",
-  "description": "A professional medical calculator for CHA2DS2-VASc stroke risk and Z-score calculations.",
+  "description": "Bộ công cụ tính toán y khoa chuyên nghiệp: CHA2DS2-VASc, ASCVD, ClCr, eGFR, Child-Pugh, LDL-C, HAS-BLED, Glasgow, CURB-65, SOFA, ARC-HBR, SCORE2, PREVENT.",
   "requestFramePermissions": []
 }
