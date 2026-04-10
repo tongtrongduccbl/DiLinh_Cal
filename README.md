@@ -1,6 +1,6 @@
 # TTD Ver 1.1 - Medical Calculator Suite
 
-Bộ công cụ tính toán y khoa chuyên nghiệp dành cho bác sĩ, được phát triển bởi **BS. Tống Trọng Đức**.
+Bộ công cụ tính toán trong y khoa, được phát triển bởi **BS. Tống Trọng Đức**.
 
 ## 🌟 Tính năng chính
 
@@ -47,7 +47,7 @@ Bộ công cụ tính toán y khoa chuyên nghiệp dành cho bác sĩ, được
 
 © 2026 Di Linh Hospital. Phát triển bởi **Tống Trọng Đức**.
 
-**CẢNH BÁO**: Kết quả tính toán chỉ mang tính chất tham khảo và không thay thế cho chẩn đoán lâm sàng của bác sĩ chuyên khoa.
+**CẢNH BÁO**: Kết quả tính toán chỉ mang tính chất tham khảo và không thay thế cho chẩn đoán lâm sàng.
 
 ---
 
